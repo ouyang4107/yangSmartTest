@@ -1,0 +1,185 @@
+账号：arcgis
+密码：Zlzk.157.157
+
+root   D:\SoftWare\nginx\ClientTest\MqttTest;   #工程所在路径
+index  index.html index.htm;  #首页（默认页）
+
+本机Ip设置：192.168.1.156
+网关：192.168.1.23
+
+http://192.168.1.157/liqian/sharedtools.git
+git
+用户名: yangcizhong
+密码: yangcizhogn
+
+D:\Program Files\TortoiseGit\bin\TortoiseGitPlink.exe
+
+
+MqttTest/ClientID4416
+MqttTest/ClientID4417
+
+
+本机地址：
+http://localhost:8021/index.html   //ArcGIS 一张图测试
+
+http://localhost:8020/index.html   //mqtt单独测试页面
+
+http://localhost/arcgis_js_v417_sdk/arcgis_js_api/sdk/latest/sample-code/intro-layers/index.html   // arcgis api 帮助文档
+
+
+
+
+				children:[
+					{ 
+						path: '/mqttTest',
+						name: 'mqttTest',
+						component: () => import('/@/views/imutation/mqttTest/index.vue'),
+						meta: {
+							title: 'message.router.mqttTest',
+							isLink: '',
+							isHide: false,
+							isKeepAlive: true,
+							isAffix: false,
+							isIframe: false,
+							roles: ['admin', 'common'],
+							icon: 'iconfont icon-jiliandongxuanzeqi',
+						},
+					}
+				],
+
+
+                children:[
+					{ 
+						path: '/imutation/mqttt',
+						name: 'imutationMqtt',
+						component: () => import('/@/views/imutation/mqtt/index.vue'),
+						meta: {
+							title: 'message.router.mqttTest',
+							isLink: '',
+							isHide: false,
+							isKeepAlive: true,
+							isAffix: false,
+							isIframe: false,
+							roles: ['admin', 'common'],
+							icon: 'iconfont icon-jiliandongxuanzeqi',
+						}
+					},
+					{ 
+						path: '/imutation/facility',
+						name: 'imutationFacility',
+						component: () => import('/@/views/imutation/facility/index.vue'),
+						meta: {
+							title: 'message.router.facilityTest',
+							isLink: '',
+							isHide: false,
+							isKeepAlive: true,
+							isAffix: false,
+							isIframe: false,
+							roles: ['admin', 'common'],
+							icon: 'iconfont icon-jiliandongxuanzeqi',
+						}
+					},
+				],
+
+
+
+<style scoped lang="scss">
+.layout-navbars-breadcrumb-index {
+	height: 50px;
+	display: flex;
+	align-items: center;
+	background: var(--next-bg-topBar);
+	//border-bottom: 1px solid var(--next-border-color-light);
+	border-bottom: 5px solid var(--el-color-primary);
+	box-sizing: content-box;
+}
+</style>
+
+https://utility.arcgisonline.com/arcgis/rest/services/Geometry/GeometryServer
+
+http://192.168.1.156:6080/arcgis/rest/services/Geometry/GeometryServer
+
+http://localhost:6080/arcgis/rest/services/Geometry/GeometryServer
+
+
+http://localhost/arcgis_js_v417_api/arcgis_js_api/library/4.17/dojo
+
+http://192.168.1.156/arcgis_js_v417_api/arcgis_js_api/library/4.17/dojo
+
+
+a.DEFAULT_TILE_BACKGROUND="";
+
+ data:image/png;base64,iVBORw0K
+
+http://10.43.194.243/doc/page/preview.asp
+http://10.43.194.246/doc/page/config.asp
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
