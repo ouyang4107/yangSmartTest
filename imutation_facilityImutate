@@ -1,0 +1,591 @@
+<template>
+    <div class="imutation-main" style="height:100%;">
+		<!-- 左侧面板 -->
+		<div class="left" >
+			<label>服务器IP</label>
+			<br>
+			<el-input v-model="prosData.serverIp" style="width:200px;"></el-input>
+			<br>
+			<label>端口</label>
+			<br>
+			<el-input v-model="prosData.port" style="width: 200px;padding: 5px 1px;"></el-input>
+			<br>
+			<el-button type="success" @click="connectBtn()" :disabled="!prosData.notConnect">连接</el-button> 
+			<el-button type="danger" @click="cutConnectBtn()" :disabled="prosData.notConnect">断开连接</el-button>
+			<br>
+			<!-- 订阅列表 -->
+			<div class="subscribe-topic">
+				<label>填写订阅主题</label>
+				<el-input v-model="prosData.topicInput"></el-input>
+				<el-button @click="subscribeTopicBtn(prosData.topicInput)" class="subscribe-btn" :disabled="prosData.notConnect">订阅</el-button>
+				<br>
+				<div class="sub-topic-list" style="padding: 8px 1px;">
+					<h5 id="subscribeListLabel">订阅主题列表</h5>
+					<div id="subscribeList-tt">
+						<div id="{{topicItem.topic}}" class="subscribeListItem" v-for="(topicItem,index) in prosData.subTopicsShow" :key="index">
+						  {{topicItem.topic}}&nbsp;
+						  <button style="width: 20px;border: none;cursor: pointer;" class="close" title="取消订阅" @click="unsubscribe(topicItem.topic)">×</button>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<!-- 右侧面板 -->
+		<div class="right">			
+			<div class="top-recent">
+                <div style="">
+					<span style="font-weight:700;">(塔机,起重机)设备添加及注册</span>
+					<el-button type="success" @click="addMachine()" style="margin: 6px 42px;" :disabled="prosData.notConnect">
+						<el-icon><Plus /></el-icon>
+						添加设备
+					</el-button>	
+				</div>
+
+				<el-form class="machine-register-cls" v-for="(machineItem,index) in machineData" :key="index">
+					<div style="font-weight:700;">设备[{{index + 1}}]</div>
+					<el-form-item label="反馈时间" class="machine-item-cls">
+						<el-input v-model="machineItem.time" placeholder="" :disabled="true"></el-input>
+					</el-form-item>
+                    <el-form-item label="设备名称(或ID)" class="machine-item-cls">
+						<el-input v-model="machineItem.id" placeholder="如，machine-01"></el-input>
+					</el-form-item>
+					<el-form-item label="设备类型" class="machine-item-cls">
+						<!-- <el-input v-model="machineItem.type" placeholder="如，无人塔机"></el-input> -->
+						<el-select v-model="machineItem.type">
+							<el-option label="无" value="0"></el-option>
+							<el-option label="无人塔机" value="1"></el-option>
+							<el-option label="无人起重机" value="2"></el-option>
+							<el-option label="挂钩机器人" value="3"></el-option>
+							<el-option label="卸钩机器人" value="4"></el-option>
+							<el-option label="无人泵车" value="5"></el-option>
+							<el-option label="无人挖机" value="6"></el-option>
+							<el-option label="无人高机(幕墙清洗）" value="7"></el-option>
+							<el-option label="无人安装（玻璃安装）" value="8"></el-option>
+							<el-option label="3D打印蜘蛛车" value="9"></el-option>
+							<el-option label="其他" value="10"></el-option>
+						</el-select>
+					</el-form-item>
+					<div class="position-params">
+						<label style="color: #606266;">GPS坐标位置(GPSposition)</label>
+						<el-form-item class="area-item" label="X:">
+							<!-- <el-input v-model="machineItem.GPSposition.x" placeholder=""></el-input> -->
+							<el-input-number v-model="machineItem.GPSposition.x"></el-input-number>
+						</el-form-item>
+						<el-form-item class="area-item" label="Y:">
+							<!-- <el-input v-model="machineItem.GPSposition.y" placeholder=""></el-input> -->
+							<el-input-number v-model="machineItem.GPSposition.y"></el-input-number>
+						</el-form-item>
+						<el-form-item class="area-item" label="Z:">
+							<!-- <el-input v-model="machineItem.GPSposition.z" placeholder=""></el-input> -->
+							<el-input-number v-model="machineItem.GPSposition.z"></el-input-number>
+						</el-form-item>
+					</div>
+					<div class="position-params">
+						<label style="color: #606266;">设备节点状态参数(jointState)</label>
+						<el-form-item class="area-item" label="回转角:">
+							<!-- <el-input v-model="machineItem.jointState[0].positionparam" placeholder=""></el-input> -->
+							<el-input-number v-model="machineItem.jointState[0].positionparam"></el-input-number>
+						</el-form-item>
+						<el-form-item class="area-item" label="变幅长度或变幅角度:">
+							<!-- <el-input v-model="machineItem.jointState[1].positionparam" placeholder=""></el-input> -->
+							<el-input-number v-model="machineItem.jointState[1].positionparam"></el-input-number>
+						</el-form-item>
+						<el-form-item class="area-item" label="卷扬高度:">
+							<!-- <el-input v-model="machineItem.jointState[2].positionparam" placeholder=""></el-input> -->
+							<el-input-number v-model="machineItem.jointState[2].positionparam"></el-input-number>
+						</el-form-item>
+					</div>
+					<el-form-item label="设备工作状态" class="machine-item-cls">
+						<el-select v-model="machineItem.workstatus">
+							<el-option label="空闲0" value="0"></el-option>
+							<el-option label="前往放置点规划1" value="1"></el-option>
+							<el-option label="前往放置点2" value="2"></el-option>
+							<el-option label="构建二维码识别3" value="3"></el-option>
+							<el-option label="装钩调姿等待4" value="4"></el-option>
+							<el-option label="装钩等待5" value="5"></el-option>
+							<el-option label="前往安装点规划6" value="6"></el-option>
+							<el-option label="前往安装点7" value="7"></el-option>
+							<el-option label="卸钩调姿等待8" value="8"></el-option>
+							<el-option label="装配等待9" value="9"></el-option>
+							<el-option label="卸钩等待10" value="10"></el-option>
+							<el-option label="前往安全点规划11" value="11"></el-option>
+							<el-option label="前往安全点12" value="12"></el-option>
+							<el-option label="吊钩位置调整规划13" value="13"></el-option>
+							<el-option label="吊钩位置调整14" value="14"></el-option>
+							<el-option label="前往避让点规划15" value="15"></el-option>
+							<el-option label="前往避让点16" value="16"></el-option>
+							<el-option label="避让等待17" value="17"></el-option>
+							<el-option label="失败18" value="18"></el-option>
+							<el-option label="塔机急停19" value="19"></el-option>
+							<el-option label="展臂（汽车起重机）" value="20"></el-option>
+							<el-option label="收臂（汽车起重机）" value="21"></el-option>
+							<el-option label="行驶（汽车起重机）" value="22"></el-option>
+						</el-select>
+					</el-form-item>	
+					<el-form-item label="路径规划错误码" class="machine-item-cls">
+						<el-input v-model="machineItem.errorcode" placeholder=""></el-input>
+					</el-form-item>	
+					<el-form-item label="当前执行任务" class="machine-item-cls">
+						<!-- <el-input v-model="machineItem.currenttaskid" placeholder=""></el-input> -->
+						<el-input-number v-model="machineItem.currenttaskid"></el-input-number>
+					</el-form-item>	
+					<el-form-item label="臂长" class="machine-item-cls">
+						<!-- <el-input v-model="machineItem.craneArmLen" placeholder=""></el-input> -->
+						<el-input-number v-model="machineItem.craneArmLen"></el-input-number>
+					</el-form-item>	
+
+					<el-form-item class="machine-item-cls" style="padding: 6px 0px;">
+						<el-button type="success" @click="registerMachine(machineItem)" style="width: 70px;" :disabled="prosData.notConnect">注册设备</el-button>
+						<el-button type="danger" @click="cancelRegister(machineItem)" style="width: 70px;" :disabled="prosData.notConnect">取消注册</el-button>
+						<!-- <el-button type="danger" @click="cancelRegister(machineItem)" style="width: 70px;">发送信息</el-button> -->
+						<el-button type="danger" @click="removeMachine(index)" style="width: 70px;" :disabled="prosData.notConnect">删除设备</el-button>
+					</el-form-item>
+				</el-form>
+			</div>
+             
+			<!-- 日志 -->
+			<div class="bottom-log">
+                <label>日志({{prosData.logNum}})</label> <el-button @click="clearLog()" class="clear-btn">清除日志</el-button>
+				<br>
+				<div class="pre-scrollable" id="logContentsTemp" style="top: 4px;position: relative;">
+                    <div id='logLine-{{item.logId}}' class='logLine' v-for="(item,index) in prosData.logsTent" :key="index">
+						<span class='logTime'>(时间:{{item.time}})
+						</span><span class='logMessage'>{{item.msg}}</span>
+					</div>
+				</div>
+			</div>
+			
+		</div>
+	</div>
+</template>
+
+<script lang="ts">
+import { defineComponent, ref,toRefs, reactive,} from 'vue';
+import { ElMessage } from 'element-plus'
+import { Plus,CloseBold } from '@element-plus/icons-vue'
+//import { el } from 'element-plus/lib/locale';
+
+export default defineComponent({
+	name: 'facilityImutate',
+	components: { Plus,CloseBold },
+	setup() {
+        //日期格式函数
+		const dateFormat = (date:any,fmt:any) =>  { //author: meizz  
+			const o:any = {  
+			"M+" : date.getMonth()+1,         //月份  
+			"d+" : date.getDate(),          //日  
+			"h+" : date.getHours(),          //小时  
+			"m+" : date.getMinutes(),         //分  
+			"s+" : date.getSeconds(),         //秒  
+			"q+" : Math.floor((date.getMonth()+3)/3), //季度  
+			"S" : date.getMilliseconds()       //毫秒  
+			};  
+			if(/(y+)/.test(fmt))  
+			fmt=fmt.replace(RegExp.$1, (date.getFullYear()+"").substr(4 - RegExp.$1.length));  
+			for(let k in o)  
+			if(new RegExp("("+ k +")").test(fmt))  
+			fmt = fmt.replace(RegExp.$1, (RegExp.$1.length==1) ? (o[k]) : (("00"+ o[k]).substr((""+ o[k]).length)));  
+			return fmt;  
+		} 
+
+		let client:any
+		const machineTopic = 'display/status/Machine'
+		const taskTopic = 'display/status/Task'
+		const subTaskTopic = 'task/#'
+
+		const registerTopicPub = 'manager/register' //发布
+		const registerTopicBackSub = 'manager/registerack/' // + [id]  //订阅
+        const publishToSystemTopicPub = 'status/crane/' // + [id]  //发布
+        
+        const machineData = reactive([])
+
+		//属性数据
+		const prosData = reactive({ 
+			selectItemIndex: '0',
+			serverIp: '192.168.1.157',
+			port: '8083',
+			notConnect: true,
+			textAreaLog: 'fsdfds',
+			topicInput: '',
+			logNum:0,
+			subTopics: [ 
+				//{ topic: machineTopic, qos: 0 },
+				//{ topic: taskTopic, qos: 0 }, 
+
+				//{ topic: subTaskTopic, qos: 0 }, 
+                //{ topic: topicEditMachine, qos: 0 },   { topic: topicEditTask, qos: 0 }, 
+			],
+			subTopicsShow:[],
+			tasklist:[
+				{
+					"id":'0',          //整型，任务id
+					"index":'',       //整型，任务执行顺序编号
+					"name":'',        //字符串，任务名称
+					"type":'',        //整型枚举，任务类型，1 行驶任务，2 吊装任务，3 挖沟任务，4 泵送任务
+					"process":'',     //浮点型，施工进度
+					"resource":'test1',  //字符串，任务预计执行设备名称
+					"startTime":'',   //整型，任务实际开始时间，格林威治时间
+					"endTime":'',     //整型，任务实际结束时间
+					"planStartTime":'',   //整型，任务计划开始时间
+					"planEndTime":'',     //整型，任务计划结束时间
+					"averageTime":'',     //整型，任务平均执行时间
+					"groupId":'',     //分组ID
+					"Area":         //不同的任务类型有不同个数的区域参数，参数按顺序下标排列
+					[
+						{
+							"AreaId":'',      //整型，区域id
+							"position":{"x":1,"y":2,"z":3}, //非区域时具体坐标位置
+							"orientation":'', //浮点型，朝向角度
+						}
+					],
+					"buildingUnit": //任务参数
+					[
+						{
+							"unitid":'',
+							"unittype":'',
+							"unitweight":'',
+							"orientation":''
+						}
+					],
+					"status":''
+				}
+			],
+            machinelist: [{
+				        uid: 'machine-uid-kkkkk1',         //整型，编号
+						name: 'test1',        //字符串型，设备识别号/设备名
+						type: 1,        //整型，智能设备类型，1 无人塔机，2无人汽车起重机，3挂钩机器人，4 卸钩机器人，5 无人泵车，6 无人挖机
+						JointStat:[0,0,0], //根据设备类型不同对应不同参数，参数均为字符串或浮点型
+						position:{    //当前位置  
+							x:122,
+							y:112,
+							z: 12
+						},
+						inputTxt: '',
+						showTask:false,
+						currentTaskID: '0'   //当前执行任务ID
+			},			
+			],
+			logsTent:[],
+		})
+
+        //添加设备
+        const addMachine = ()=>{
+		   let machineId = ''
+		   let notHave = false
+		   if(machineData.length == 0) machineId='machine-01'
+		   for(let i=0;i<machineData.length;i++){
+			   if((i + 1)<10){
+                   machineId = 'machine-0' + (i+1)
+			   }else{
+                   machineId = 'machine-' + i
+			   }
+			   let findItem = machineData.find((item:any) =>{
+				   if(item.id == machineId){
+					   return item
+				   }
+			   })
+			   if(!findItem){
+				   notHave = true
+				   break
+			   }
+		    }
+
+		   	if(!notHave && machineData.length > 0){
+				if((machineData.length+1) < 10){
+						machineId = 'machine-0' + (machineData.length+1)
+				}else{
+					machineId = 'machine-' + (machineData.length+1)
+				}
+			}
+		   machineData.push({id: machineId,type:'0',time: dateFormat(new Date(),"yyyy-MM-ddThh:mm:ss").replace('T',' '),workstatus: '',errorcode:'',currenttaskid:-1,craneArmLen:0,GPSposition:{x:0,y:0,z:0},jointState:[{ positionparam: 0 },{ positionparam: 0 },{ positionparam: 0 }]})
+		   //machineData.push({id: machineId,type:'0',time: Date.now(),workstatus: '',errorcode:'',currenttaskid:-1,craneArmLen:0,GPSposition:{x:0,y:0,z:0},jointState:[{ positionparam: 0 },{ positionparam: 0 },{ positionparam: 0 }]})
+		}
+
+		const registerMachines = reactive([])
+		//注册设备
+        const registerMachine = (machineItem:any)=>{
+            const message = JSON.stringify({token:'', uid:machineItem.id, type: parseInt(machineItem.type), GPSposition: machineItem.GPSposition })
+			publish(registerTopicPub,message,0,false) //注册
+			ElMessage({
+				showClose: true,
+				message: '注册设备指令已提交',
+				type: 'success',
+			})
+            const timerTemp = setInterval(() => {	
+				machineItem.time = Date.now();//dateFormat(new Date(),"yyyy-MM-ddThh:mm:ss").replace('T',' ')
+				const typeT = machineItem.type
+				const workstatusT = machineItem.workstatus
+				machineItem.type = parseInt(typeT)
+				machineItem.workstatus = parseInt(workstatusT)
+				const message1 = JSON.stringify(machineItem)
+				publish(publishToSystemTopicPub + machineItem.id, message1, 0, false) //发消息到协同系统
+                machineItem.type = typeT
+				machineItem.workstatus = workstatusT
+				machineItem.time = dateFormat(new Date(),"yyyy-MM-ddThh:mm:ss").replace('T',' ')
+			}, 500)
+
+			let findItem = registerMachines.find((item:any) =>{
+				if(item.machineId == machineItem.id){
+					return item
+				}
+			})
+
+			if(!findItem) registerMachines.push({ machineId: machineItem.id,timer: timerTemp })
+			
+			// setTimeout(() => {	
+			// 	const message1 = JSON.stringify({machineItem})
+			// 	publish(publishToSystemTopicPub,message1,0,false)
+			// }, 500)
+		}
+
+        //取消注册
+        const cancelRegister = (machineItem:any)=>{
+			for(let i=0;i<registerMachines.length;i++){
+				if(registerMachines[i].machineId == machineItem.id){
+					clearTimeout(registerMachines[i].timer)
+					registerMachines.splice(i,1)
+					break
+				}
+			}
+		}
+        //删除设备
+        const removeMachine = (id:any)=>{
+			const removedMachine = machineData.splice(id,1)
+			for(let i=0;i<registerMachines.length;i++){
+				if(registerMachines[i].machineId == removedMachine[0].id){
+					clearTimeout(registerMachines[i].timer)
+					registerMachines.splice(i,1)
+					break
+				}
+			}
+		}
+
+		//清除日志
+		const clearLog = () =>{
+			prosData.logNum = 0;
+			//$("#logContents").html("");
+			prosData.logsTent = [];
+		}
+
+        //添加日志
+		const appendLog =(msg:string)=> {
+			prosData.logNum++;
+			if(prosData.logNum > 1000){
+				prosData.logNum = 1;
+				//$("#logContents").html("");
+				prosData.logsTent = [];
+			}
+			//msg = "<div id='logLine-"+prosData.logNum+"' class='logLine'><span class='logTime'>(时间:" + (dateFormat(new Date(),"yyyy-MM-ddThh:mm:ss").split("T"))[1].substr(0, 12) + ")</span><span class='logMessage'>" + msg + "</span></div>";
+			//$("#logContents").append(msg + "\n");
+			prosData.logsTent.push({ logId: prosData.logNum,time: (dateFormat(new Date(),"yyyy-MM-ddThh:mm:ss").split("T"))[1].substr(0, 12), msg: msg})
+		}
+       
+		//uuid随机生成
+		const getUuid =() => {
+			const uid:any = [];
+			const hexDigits = "0123456789abcdefghijklmnopqrst";
+			for (let i = 0; i < 32; i++) {
+				uid[i] = hexDigits.substr(Math.floor(Math.random() * 0x10), 1);
+			}
+			uid[6] = "4";
+			uid[15] = hexDigits.substr((uid[15] & 0x3) | 0x8, 1);
+			let uuid = uid.join("");
+			return uuid;
+		}
+
+		//接受到订阅主题消息 function called whenever our MQTT connection receives a message
+		const onMessage =(msg:any) => {
+			const topic = msg.destinationName;
+			const payload = msg.payloadString;
+			const qos = msg._getQos();
+			const retained = msg._getRetained();
+			const qosStr = ((qos > 0) ? "[qos " + qos + "]" : "");
+			const retainedStr = ((retained) ? "[retained]" : "");
+			appendLog("收到消息 [" + topic + "]" + qosStr + retainedStr + " " + payload);
+			
+			//接受到所有设备消息
+			if(topic == machineTopic){
+				debugger
+				prosData.machinelist = []
+				prosData.machinelist = JSON.parse(payload).machinelist
+				//if(prosData.machinelist && prosData.machinelist.length > 1) prosData.machinelist.shift()
+			}
+
+			//接受得到所有任务信息
+			if(topic == taskTopic){
+				debugger
+				prosData.tasklist = []
+				prosData.tasklist = JSON.parse(payload).tasklist
+			}
+
+		}
+
+		//失去连接 - 主动断开连接或网络断开，websocket过期被动失去连接
+		const onConnectLost = (error:any) => { 
+			debugger
+			prosData.notConnect = true;
+			appendLog("断开连接 " + prosData.serverIp + ":" + prosData.port + ".  Code: " + error.errorCode + ", Message: " + error.errorMessage);
+			//$("#subscribeList").html("");
+			prosData.subTopicsShow = []
+			ElMessage({
+				showClose: true,
+				message: '已断开Mqtt服务器【'+ prosData.serverIp + ":" + prosData.port +'】的连接',
+				type: 'warning',
+			})
+		}
+
+		//连接MQTT服务器
+		const connectBtn = (event:any) => {
+		    debugger
+		    try {
+			    const clientId = getUuid()
+	        	client = new Paho.MQTT.Client(prosData.serverIp, parseFloat(prosData.port), clientId);
+			} catch (error) {
+				//alert("Error:" + error);
+				ElMessage({
+					showClose: true,
+					message: '连接Mqtt服务器【'+ prosData.serverIp + ":" + prosData.port +'】失败Error:' + error,
+					type: 'warning',
+				})
+			}
+
+			client.onMessageArrived = onMessage
+			client.onConnectionLost = onConnectLost
+
+            //连接成功
+			const onSuccess = () => { 
+				debugger
+                prosData.notConnect = false;
+			    appendLog("连接到 " + prosData.serverIp + ":" + prosData.port);
+				ElMessage({
+					showClose: true,
+					message: '连接到Mqtt服务器【'+ prosData.serverIp + ":" + prosData.port +'】',
+					type: 'success',
+				})
+				
+				//默认订阅主题
+				let time = 500;
+				for (let i in prosData.subTopics) {
+					setTimeout((function(topic) {
+						return function() {
+							subscribeTopic(topic)
+						}
+					})(prosData.subTopics[i]), time);
+					time += 100;
+				}
+			}
+
+            //连接服务器失败
+			const onFailure = (error:any) => { 
+				debugger
+				appendLog("连接到" + prosData.serverIp + ":" + prosData.port + "失败.  Code: " + error.errorCode + ", Message: " + error.errorMessage);
+				prosData.notConnect = true;
+				prosData.subTopicsShow = []
+				ElMessage({
+					showClose: true,
+					message: '连接到Mqtt服务器【'+ prosData.serverIp + ":" + prosData.port +'】失败',
+					type: 'error',
+				})
+		    }
+			
+			const connectOptions = { 
+				useSSL:false,
+				cleanSession: true, //用于控制是否客户端刷新页面丢失消息，服务端保留Session，建立连接重发消息
+				keepAliveInterval: 3600, // if no activity after one hour, disconnect
+				timeout:5,
+				onSuccess: onSuccess,
+				onFailure: onFailure,
+			}
+			client.connect(connectOptions);
+		}
+
+        //订阅主题按钮函数
+        const subscribeTopicBtn = (topic:any)=>{
+            subscribeTopic({topic:topic,qos:0})
+		}
+
+		//订阅消息
+		const subscribeTopic =(topicOption:any)=> {
+			client.subscribe(topicOption.topic, {
+				qos: topicOption.qos,
+				onSuccess: function() {
+					appendLog("订阅到 [" + topicOption.topic + "][qos " + topicOption.qos + "]");
+					prosData.subTopicsShow.push({topic:topicOption.topic,qos: topicOption.qos})
+				},
+				onFailure: function() {
+					appendLog("订阅失败: [" + topicOption.topic + "][qos " + topicOption.qos + "]");
+				}
+			})
+		}
+
+		//取消订阅
+		const unsubscribe =(topic:any) => {
+			debugger
+			client.unsubscribe(topic, {
+				onSuccess: function() { //取消订阅成功
+					appendLog("取消订阅 [" + topic + "]");
+					for(let i=0;i<prosData.subTopicsShow.length;i++){
+						if(prosData.subTopicsShow[i].topic == topic){
+							prosData.subTopicsShow.splice(i,1) //取消订阅，前端需要删除 //prosData.subTopicsShow.push({topic:topicOption.topic,qos: topicOption.qos})
+							break
+						}
+					}
+					ElMessage({ 
+						showClose: true,
+						message: '取消订阅主题【'+ topic +'】',
+						type: 'success',
+					})
+				},
+				onFailure: function() { //取消订阅失败
+					appendLog("取消订阅失败: [" + topic + "]");
+					ElMessage({
+						showClose: true,
+						message: '取消订阅主题【'+ topic +'】失败',
+						type: 'error',
+					})
+				}
+			});
+		}
+
+        //断开连接Mqtt服务器
+		const cutConnectBtn = (event:any) => {
+		   debugger
+		   client.disconnect()
+		   prosData.notConnect = true
+		   prosData.subTopicsShow = []
+		   prosData.machinelist = []
+		}
+		
+		//发布消息
+		const publish =(topic:any, message:any, qos:any, retained:any)=> {
+			let msgObj = new Paho.MQTT.Message(message);
+			msgObj.destinationName = topic;
+			if (qos) { msgObj.qos = qos; }
+			if (retained) { msgObj.retained = retained; }
+			client.send(msgObj);
+			var qosStr = ((qos > 0) ? "[qos " + qos + "]" : "");
+			var retainedStr = ((retained) ? "[retained]" : "");
+			appendLog("发布消息 [" + topic + "]" + qosStr + retainedStr + " " + message);	        
+	    }
+        
+        return {
+			prosData,
+			machineData,
+			addMachine,
+			registerMachine,
+			cancelRegister,
+			removeMachine,
+
+			connectBtn,
+			cutConnectBtn,
+			clearLog,
+			unsubscribe,
+			subscribeTopicBtn,
+		}
+	},
+
+});
+</script>
+
+<style scoped lang="scss">
