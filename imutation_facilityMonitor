@@ -1,0 +1,695 @@
+<template>
+    <div class="imutation-main" style="height:100%;">
+		<!-- <div class="left" style="width: 220px;float: left;height:100%;">
+			<ul class="ul-left-menu">
+				<li @click="onMqttSelect"><a>MQTT测试</a></li>
+				<li @click="onFacilitySelect"><a>设备交互测试</a></li>
+			</ul>
+		</div>
+		<div>{{prosData.selectItemIndex}}</div>
+		<div class="right" style="width: calc(100% - 220px);float: right;background: white;height: 100%;">
+            <div v-if="prosData.selectItemIndex=='1'"><iframe url="http://localhost:8020"></iframe></div>
+			<div v-if="prosData.selectItemIndex=='2'">设备交互测试内容</div>
+		</div> -->
+		<div class="left" >
+			<label>服务器IP</label>
+			<br>
+			<el-input v-model="prosData.serverIp" style="width:200px;"></el-input>
+			<br>
+			<label>端口</label>
+			<br>
+			<el-input v-model="prosData.port" style="width: 200px;padding: 5px 1px;"></el-input>
+			<br>
+			<el-button type="success" @click="connectBtn()" :disabled="!prosData.notConnect">连接</el-button> 
+			<el-button type="danger" @click="cutConnectBtn()" :disabled="prosData.notConnect">断开连接</el-button>
+			<br>
+			<!-- 订阅列表 -->
+			<div class="subscribe-topic">
+				<label>填写订阅主题</label>
+				<el-input v-model="prosData.topicInput"></el-input>
+				<el-button @click="subscribeTopicBtn(prosData.topicInput)" class="subscribe-btn" :disabled="prosData.notConnect">订阅</el-button>
+				<br>
+				<div class="sub-topic-list" style="padding: 8px 1px;">
+					<h5 id="subscribeListLabel">订阅主题列表</h5>
+					<div id="subscribeList-tt">
+						<div id="{{topicItem.topic}}" class="subscribeListItem" v-for="(topicItem,index) in prosData.subTopicsShow" :key="index">
+						  {{topicItem.topic}}&nbsp;
+						  <button style="width: 20px;border: none;cursor: pointer;" class="close" title="取消订阅" @click="unsubscribe(topicItem.topic)">×</button>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<div class="start-topic-btn">
+				<el-button @click="startTopicBtn()" class="start-btn" style="top: 30px;position: relative;" :disabled="prosData.notConnect">开始执行</el-button>
+			</div>
+		</div>
+		<div class="right">
+			<label style="font-weight:700;">智能设备列表</label><br>
+			<div class="top-recent">
+               <!-- <el-input autosize type="texarea" v-model="prosData.textAreaLog"></el-input> -->
+			   <div class="machine-list" v-for="(item,index) in prosData.machinelist" :key="index" v-show="item != null && !item.test">
+                  <h4>设备{{index + 1}}</h4>
+                  <div class="machine-class">
+                      <label>设备编号：</label><span> {{item.uid}}</span> <br>
+					  <label>设备名称：</label><span> {{item.name}}</span>  <br>
+					  <label>设备类型：</label>
+					  <span v-show="item.type == 1">无人塔机</span>
+					  <span v-show="item.type == 2">无人汽车起重机</span>
+					  <span v-show="item.type == 3">挂钩机器人</span>
+					  <span v-show="item.type == 4">卸钩机器人</span>
+					  <span v-show="item.type == 5">无人泵车</span>
+					  <span v-show="item.type == 6">无人挖机</span>
+					  <br>
+					  <label>设备坐标：</label><span>x：{{item.position.x}}，y：{{item.position.y}}，z：{{item.position.z}}</span> <br>
+					  <label>设备参数：</label> <span> {{item.JointStat}}</span><br>
+					  <label>当前任务ID：</label><span> {{item.currentTaskID}}</span> &nbsp;
+					  <el-button @click="stopStartMachineBtn(item)" class="stop-machine-btn" type="success" v-show="item.isStop" :disabled="prosData.notConnect">恢复启动</el-button>
+					  <el-button @click="stopStartMachineBtn(item)" class="stop-machine-btn" type="danger" v-show="!item.isStop" :disabled="prosData.notConnect">紧急停止</el-button><br>
+
+					  <a style="cursor:pointer;" @click="showTaskDetail(item)">当前任务>></a>
+					  <div class="task-detail" v-if="showTaskDetail(item)"> 
+						<!-- 任务详情 -->
+						<label>任务ID：</label><span> {{item.taskDetail.id}}</span> <br>
+						<label>任务执行顺序编号：</label><span> {{item.taskDetail.index}}</span> <br>
+						<label>任务名称：</label><span> {{item.taskDetail.name}}</span> <br>
+						<label>任务类型：</label>
+						<span v-show="item.taskDetail.type == 1">行驶任务</span>
+						<span v-show="item.taskDetail.type == 2">吊装任务</span>
+						<span v-show="item.taskDetail.type == 3">挖沟任务</span>
+						<span v-show="item.taskDetail.type == 4">泵送任务</span>
+						<br>
+						<label>施工进度：</label><span> {{item.taskDetail.process}}</span> <br>
+						<label>预计执行设备名称：</label><span> {{item.taskDetail.resource}}</span> <br>
+						<label>状态：</label><span> {{item.taskDetail.status}}</span> <br>
+						<label>任务实际开始时间：</label><span> {{item.taskDetail.startTime}}</span> <br>
+						<label>任务实际结束时间：</label><span> {{item.taskDetail.endTime}}</span> <br>
+						<label>任务预计开始时间：</label><span> {{item.taskDetail.planStartTime}}</span> <br>
+						<label>任务预计结束时间：</label><span> {{item.taskDetail.planEndTime}}</span> <br>
+						<label>任务平均执行时间：</label><span> {{item.taskDetail.averageTime}}</span> <br>
+						<label>分组ID：</label><span> {{item.taskDetail.groupId}}</span> <br>
+						
+						<br>
+						<label>区域参数：</label>{{item.taskDetail.Area}}
+						<!-- <div>区域参数：</div>
+						<div v-for="(item,index) in item.taskDetail.Area" :key="index" style="border: 1px solid #a2a0a0;margin: 2px 0px;">
+							<div>区域ID：{{item.AreaId}}</div> 
+						    <div v-if="item.position">位置，X:{{item.position.x}}, Y:{{item.position.y}}, Z:{{item.position.z}}</div> 
+							<div>朝向角度：{{item.orientation}}</div> 	
+						</div> -->
+						<br>
+                        <label>任务参数：</label>{{item.taskDetail.buildingUnit}}
+
+						 <!-- <div>任务参数：</div>
+						 <div v-if="item.taskDetail.buildingUnit">
+							 构件ID：{{item.taskDetail.buildingUnit.unitid}}, 类型：{{item.taskDetail.buildingUnit.unittype}}, 重量：{{item.taskDetail.buildingUnit.unitweight}}, 朝向：{{item.taskDetail.buildingUnit.orientation}}, 
+						     安全点，X:{{item.taskDetail.buildingUnit.safePos.x}}, Y:{{item.taskDetail.buildingUnit.safePos.y}}, Z:{{item.taskDetail.buildingUnit.safePos.z}}
+						 </div>  -->
+
+						<!-- <div v-for="(item,index) in item.taskDetail.buildingUnit" :key="index" style="border: 1px solid #a2a0a0;margin: 2px 0px;">
+							<div>构件ID：{{item.unitid}}</div>
+							<div>构件类型：{{item.unittype}}</div> 
+							<div>构件重量：{{item.unitweight}}</div> 
+							<div>构件朝向：{{item.orientation}}</div> 
+						</div> -->
+						<br>
+
+					  </div>
+
+					  <!-- <br>
+					  <label><span>填写发送内容</span></label> <br>
+					  <el-input v-model="item.inputTxt"></el-input>
+                      <el-button @click="sendMessage(item)" style="width: 54px;height: 20px;margin: 3px 3px;">发送</el-button> -->
+				  </div>
+			   </div>
+			</div>
+
+			<!-- <div class="bottom-log">
+                <label>日志({{prosData.logNum}})</label> <el-button @click="clearLog()" class="clear-btn">清除日志</el-button>
+				<br>
+				<div class="pre-scrollable" id="logContents" style="top: 4px;position: relative;"></div>
+			</div> -->
+			<div class="bottom-log">
+                <label>日志({{prosData.logNum}})</label> <el-button @click="clearLog()" class="clear-btn">清除日志</el-button>
+				<br>
+				<div class="pre-scrollable" id="logContentsTemp" style="top: 4px;position: relative;">
+                    <div id='logLine-{{item.logId}}' class='logLine' v-for="(item,index) in prosData.logsTent" :key="index">
+						<span class='logTime'>(时间:{{item.time}})
+						</span><span class='logMessage'>{{item.msg}}</span>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</template>
+
+<script lang="ts">
+import { defineComponent, toRefs, reactive,} from 'vue';
+import { ElMessage } from 'element-plus'
+import { tr } from 'element-plus/lib/locale';
+
+export default defineComponent({
+	name: 'facilityMonitor',
+	setup() {
+        //日期格式函数
+		const dateFormat = (date:any,fmt:any) =>  { //author: meizz  
+			const o:any = {  
+			"M+" : date.getMonth()+1,         //月份  
+			"d+" : date.getDate(),          //日  
+			"h+" : date.getHours(),          //小时  
+			"m+" : date.getMinutes(),         //分  
+			"s+" : date.getSeconds(),         //秒  
+			"q+" : Math.floor((date.getMonth()+3)/3), //季度  
+			"S" : date.getMilliseconds()       //毫秒  
+			};  
+			if(/(y+)/.test(fmt))  
+			fmt=fmt.replace(RegExp.$1, (date.getFullYear()+"").substr(4 - RegExp.$1.length));  
+			for(let k in o)  
+			if(new RegExp("("+ k +")").test(fmt))  
+			fmt = fmt.replace(RegExp.$1, (RegExp.$1.length==1) ? (o[k]) : (("00"+ o[k]).substr((""+ o[k]).length)));  
+			return fmt;  
+		} 
+
+		let client:any
+		const machineTopic = 'display/status/Machine'
+		const taskTopic = 'display/status/Task'
+		const subTaskTopic = 'task/#'
+		const startTopic = 'display/start'
+
+		const stopOrStartTopicPub = 'display/command'  //[id]
+        const stopOrStartTopicSub = 'display/command/ack/' //[id]
+
+		//属性数据
+		const prosData = reactive({ 
+			selectItemIndex: '0',
+			serverIp: '192.168.1.157',
+			port: '8083',
+			notConnect: true,
+			textAreaLog: 'fsdfds',
+			topicInput: '',
+			logNum:0,
+			subTopics: [ { topic: machineTopic, qos: 0 },
+				{ topic: taskTopic, qos: 0 }, 
+				{ topic: subTaskTopic, qos: 0 }, 
+			],
+			subTopicsShow:[],
+			tasklist:[
+				{
+					"id":'0',          //整型，任务id
+					"index":'',       //整型，任务执行顺序编号
+					"name":'',        //字符串，任务名称
+					"type":'',        //整型枚举，任务类型，1 行驶任务，2 吊装任务，3 挖沟任务，4 泵送任务
+					"process":'',     //浮点型，施工进度
+					"resource":'test1',  //字符串，任务预计执行设备名称
+					"startTime":'',   //整型，任务实际开始时间，格林威治时间
+					"endTime":'',     //整型，任务实际结束时间
+					"planStartTime":'',   //整型，任务计划开始时间
+					"planEndTime":'',     //整型，任务计划结束时间
+					"averageTime":'',     //整型，任务平均执行时间
+					"groupId":'',     //分组ID
+					"Area":         //不同的任务类型有不同个数的区域参数，参数按顺序下标排列
+					[
+						{
+							"AreaId":'0',      //整型，区域id
+							"position":{"x":1,"y":2,"z":3}, //非区域时具体坐标位置
+							"orientation":'0', //浮点型，朝向角度
+						},						
+						{
+							"AreaId":'0',      //整型，区域id
+							"position":{"x":1,"y":2,"z":3}, //非区域时具体坐标位置
+							"orientation":'0', //浮点型，朝向角度
+						}
+					],
+					"buildingUnit": //任务参数
+					[
+						{
+							"unitid":'0',
+							"unittype":'0',
+							"unitweight":'0',
+							"orientation":'0'
+						},
+						{
+							"unitid":'0',
+							"unittype":'0',
+							"unitweight":'0',
+							"orientation":'0'
+						}
+					],
+					"status":''
+				}
+			],
+            machinelist: [{
+				        uid: 'machine-uid-kkkkk1',         //整型，编号
+						name: 'test1',        //字符串型，设备识别号/设备名
+						type: 1,        //整型，智能设备类型，1 无人塔机，2无人汽车起重机，3挂钩机器人，4 卸钩机器人，5 无人泵车，6 无人挖机
+						JointStat:[0,0,0], //根据设备类型不同对应不同参数，参数均为字符串或浮点型
+						position:{    //当前位置  
+							x:122,
+							y:112,
+							z: 12
+						},
+						inputTxt: '',
+						showTask:false,
+						currentTaskID: '0',   //当前执行任务ID
+						isStop: true,
+			},
+			// {
+			// 	        uid: 'machine-uid-kkkkk2',         //整型，编号
+			// 			name: '设备名称测试2',        //字符串型，设备识别号/设备名
+			// 			type: 2,        //整型，智能设备类型，1 无人塔机，2无人汽车起重机，3挂钩机器人，4 卸钩机器人，5 无人泵车，6 无人挖机
+			// 			JointStat:[], //根据设备类型不同对应不同参数，参数均为字符串或浮点型
+			// 			position:{    //当前位置  
+			// 				x:132,
+			// 				y:132,
+			// 				z: 13
+			// 			},
+			// 			inputTxt: '',
+			//          showTask:false,
+			// 			currentTaskID: '1'   //当前执行任务ID
+			// },
+			],
+			logsTent: [],
+
+			machinelistStatus:[],
+			listMachineName:[],
+		})
+
+		//清除日志
+		const clearLog = () =>{
+			prosData.logNum = 0;
+			//$("#logContents").html("");
+			prosData.logsTent = []
+		}
+
+		//机器发送指令
+		let sendMessage = (msg:any) =>{
+			// prosData.logNum = 0;
+			// $("#logContents").html("");
+			//const publish =(topic:any, message:any, qos:any, retained:any)
+		}
+
+        //添加日志
+		const appendLog =(msg:string)=> {
+			prosData.logNum++;
+			if(prosData.logNum > 1000){
+				prosData.logNum = 1
+				//$("#logContents").html("");
+				prosData.logsTent = []
+			}
+			//msg = "<div id='logLine-"+prosData.logNum+"' class='logLine'><span class='logTime'>(时间:" + (dateFormat(new Date(),"yyyy-MM-ddThh:mm:ss").split("T"))[1].substr(0, 12) + ")</span><span class='logMessage'>" + msg + "</span></div>";
+			//$("#logContents").append(msg + "\n");
+			prosData.logsTent.push({ logId: prosData.logNum, time: (dateFormat(new Date(),"yyyy-MM-ddThh:mm:ss").split("T"))[1].substr(0, 12), msg: msg})
+		}
+       
+        const onMqttSelect = (event:any) => {
+		   prosData.selectItemIndex = '1'
+           debugger
+		}
+		const onFacilitySelect = (event:any) => {
+		   prosData.selectItemIndex = '2'
+           debugger
+		}
+
+		//uuid随机生成
+		const getUuid =() => {
+			const uid:any = [];
+			const hexDigits = "0123456789abcdefghijklmnopqrst";
+			for (let i = 0; i < 32; i++) {
+				uid[i] = hexDigits.substr(Math.floor(Math.random() * 0x10), 1);
+			}
+			uid[6] = "4";
+			uid[15] = hexDigits.substr((uid[15] & 0x3) | 0x8, 1);
+			let uuid = uid.join("");
+			return uuid;
+		}
+
+		//接受到订阅主题消息 function called whenever our MQTT connection receives a message
+		const onMessage =(msg:any) => {
+			const topic = msg.destinationName;
+			const payload = msg.payloadString;
+			const qos = msg._getQos();
+			const retained = msg._getRetained();
+			const qosStr = ((qos > 0) ? "[qos " + qos + "]" : "");
+			const retainedStr = ((retained) ? "[retained]" : "");
+			appendLog("收到消息 [" + topic + "]" + qosStr + retainedStr + " " + payload + "");
+			
+			//接受到所有设备消息
+			if(topic == machineTopic){
+				//debugger
+				prosData.machinelist = []
+				prosData.machinelist = JSON.parse(payload).machinelist
+				//if(prosData.machinelist && prosData.machinelist.length > 1) prosData.machinelist.shift()
+
+				for(let i=0;i<prosData.machinelist.length;i++){
+
+					let findItem = prosData.machinelistStatus.find((item:any) =>{
+						if(item.name == prosData.machinelist[i].name){
+							return item
+						}
+					})
+					if(!findItem){
+						prosData.machinelist[i].isStop = true
+                        prosData.machinelistStatus.push({name: prosData.machinelist[i].name, isStop: true})
+					}else{
+						prosData.machinelist[i].isStop = findItem.isStop
+					}
+
+                    // if(prosData.listMachineName.indexOf(prosData.machinelist[i].name) == -1){
+					// 	prosData.listMachineName.push(prosData.machinelist[i].name)	
+					// }else{
+                        
+					// }
+				}
+				
+			}
+
+			//接受得到所有任务信息
+			if(topic == taskTopic){
+				//debugger
+				prosData.tasklist = []
+				prosData.tasklist = JSON.parse(payload).tasklist
+			}
+		}
+
+		//失去连接 - 主动断开连接或网络断开，websocket过期被动失去连接
+		const onConnectLost = (error:any) => { 
+			debugger
+			prosData.notConnect = true;
+			appendLog("断开连接 " + prosData.serverIp + ":" + prosData.port + ".  Code: " + error.errorCode + ", Message: " + error.errorMessage);
+			//$("#subscribeList").html("");
+			prosData.subTopicsShow = []
+			ElMessage({
+				showClose: true,
+				message: '已断开Mqtt服务器【'+ prosData.serverIp + ":" + prosData.port +'】的连接',
+				type: 'warning',
+			})
+		}
+
+		//连接MQTT服务器
+		const connectBtn = (event:any) => {
+		    debugger
+		    try {
+			    const clientId = getUuid()
+	        	client = new Paho.MQTT.Client(prosData.serverIp, parseFloat(prosData.port), clientId);
+			} catch (error) {
+				//alert("Error:" + error);
+				ElMessage({
+					showClose: true,
+					message: '连接Mqtt服务器【'+ prosData.serverIp + ":" + prosData.port +'】失败Error:' + error,
+					type: 'warning',
+				})
+			}
+
+			client.onMessageArrived = onMessage
+			client.onConnectionLost = onConnectLost
+
+            //连接成功
+			const onSuccess = () => { 
+				debugger
+                prosData.notConnect = false;
+			    appendLog("连接到 " + prosData.serverIp + ":" + prosData.port);
+				ElMessage({
+					showClose: true,
+					message: '连接到Mqtt服务器【'+ prosData.serverIp + ":" + prosData.port +'】',
+					type: 'success',
+				})
+				
+				//默认订阅主题
+				let time = 500;
+				for (let i in prosData.subTopics) {
+					setTimeout((function(topic) {
+						return function() {
+							subscribeTopic(topic)
+						}
+					})(prosData.subTopics[i]), time);
+					time += 100;
+				}
+			}
+
+            //连接服务器失败
+			const onFailure = (error:any) => { 
+				debugger
+				appendLog("连接到" + prosData.serverIp + ":" + prosData.port + "失败.  Code: " + error.errorCode + ", Message: " + error.errorMessage);
+				prosData.notConnect = true;
+				prosData.subTopicsShow = []
+				ElMessage({
+					showClose: true,
+					message: '连接到Mqtt服务器【'+ prosData.serverIp + ":" + prosData.port +'】失败',
+					type: 'error',
+				})
+		    }
+			
+			const connectOptions = { 
+				useSSL:false,
+				cleanSession: true, //用于控制是否客户端刷新页面丢失消息，服务端保留Session，建立连接重发消息
+				keepAliveInterval: 3600, // if no activity after one hour, disconnect
+				timeout:5,
+				onSuccess: onSuccess,
+				onFailure: onFailure,
+			}
+			client.connect(connectOptions);
+		}
+
+		//1紧急停止，2恢复启动 
+		const stopStartMachineBtn = (machineItem:any)=>{
+			debugger
+			let command = 0
+			let msg = ""
+			if(machineItem.isStop){
+				command = 2
+				machineItem.isStop = false
+				msg = '恢复启动命令已发送'
+			}
+			else{ 
+				command = 1
+				machineItem.isStop = true
+				msg = '紧急停止命令已发送'
+			}
+			for(let i=0;i<prosData.machinelistStatus.length;i++){
+				if(machineItem.name == prosData.machinelistStatus[i].name){
+					prosData.machinelistStatus[i].isStop = machineItem.isStop
+					break
+				}
+			}
+
+			const message = JSON.stringify( { machineId: machineItem.name, command: command }) //1紧急停止，2恢复启动
+			publish(stopOrStartTopicPub,message,0,false)
+			//alert('紧急停止命令已发送')
+			ElMessage({
+				showClose: true,
+				message: msg,
+				type: 'success',
+			})
+		}
+
+		//开始执行命令
+		const startTopicBtn = ()=>{
+			debugger
+			publish(startTopic,"{}",0,false)
+			//alert('开始执行命令已发送')
+			ElMessage({
+				showClose: true,
+				message: '开始执行命令已发送',
+				type: 'success',
+			})
+		}
+
+        //订阅主题按钮函数
+        const subscribeTopicBtn = (topic:any)=>{
+            subscribeTopic({topic:topic,qos:0})
+		}
+
+		//订阅消息
+		const subscribeTopic =(topicOption:any)=> {
+			client.subscribe(topicOption.topic, {
+				qos: topicOption.qos,
+				onSuccess: function() {
+					appendLog("订阅到 [" + topicOption.topic + "][qos " + topicOption.qos + "]");
+					prosData.subTopicsShow.push({topic:topicOption.topic,qos: topicOption.qos})
+				},
+				onFailure: function() {
+					appendLog("订阅失败: [" + topicOption.topic + "][qos " + topicOption.qos + "]");
+				}
+			})
+		}
+
+		//取消订阅
+		const unsubscribe =(topic:any) => {
+			debugger
+			client.unsubscribe(topic, {
+				onSuccess: function() { //取消订阅成功
+					appendLog("取消订阅 [" + topic + "]");
+					for(let i=0;i<prosData.subTopicsShow.length;i++){
+						if(prosData.subTopicsShow[i].topic == topic){
+							prosData.subTopicsShow.splice(i,1) //取消订阅，前端需要删除 //prosData.subTopicsShow.push({topic:topicOption.topic,qos: topicOption.qos})
+							break
+						}
+					}
+					ElMessage({ 
+						showClose: true,
+						message: '取消订阅主题【'+ topic +'】',
+						type: 'success',
+					})
+				},
+				onFailure: function() { //取消订阅失败
+					appendLog("取消订阅失败: [" + topic + "]");
+					ElMessage({
+						showClose: true,
+						message: '取消订阅主题【'+ topic +'】失败',
+						type: 'error',
+					})
+				}
+			});
+		}
+
+		//展开任务详情
+		const showTaskDetail =(machineItem:any) =>{
+			for(let i=0;i<prosData.tasklist.length;i++){
+				if(machineItem.currentTaskID == prosData.tasklist[i].id && machineItem.name == prosData.tasklist[i].resource){
+					machineItem.showTask = true
+					machineItem.taskDetail = prosData.tasklist[i]
+					return true
+					//break;
+				}
+				if(i == prosData.tasklist.length -1){
+					//无对应任务提示
+					// ElMessage({
+					// 	showClose: true,
+					// 	message: '没有找到与设备匹配的当前任务',
+					// 	type: 'warning',
+					// })
+				}
+			}
+			return false
+		}
+
+        //断开连接Mqtt服务器
+		const cutConnectBtn = (event:any) => {
+		   //debugger
+
+		   //for(let i=0;i<prosData.subTopicsShow.length;i++){
+		   // 	 unsubscribe(prosData.subTopicsShow[i].topic)
+		   //}
+
+		   client.disconnect()
+		   prosData.notConnect = true
+		   prosData.subTopicsShow = []
+		   prosData.machinelist = []
+		}
+		
+		//发布消息
+		const publish =(topic:any, message:any, qos:any, retained:any)=> {
+			let msgObj = new Paho.MQTT.Message(message)
+			msgObj.destinationName = topic
+			if (qos) { msgObj.qos = qos; }
+			if (retained) { msgObj.retained = retained; }
+			client.send(msgObj);
+			const qosStr = ((qos > 0) ? "[qos " + qos + "]" : "")
+			const retainedStr = ((retained) ? "[retained]" : "")
+			appendLog("发布消息 [" + topic + "]" + qosStr + retainedStr + " " + message + "");	        
+	    }
+        
+        return {
+			prosData,
+			onMqttSelect,
+			onFacilitySelect,
+			connectBtn,
+			cutConnectBtn,
+			clearLog,
+			sendMessage,
+			unsubscribe,
+			subscribeTopicBtn,
+			showTaskDetail,
+			startTopicBtn,
+			stopStartMachineBtn,
+		}
+	},
+
+});
+</script>
+
+<style scoped lang="scss">
+    .left{
+		width: 220px;
+		float: left;
+		height:100%;
+		left:-8px;
+		position: relative;
+	}
+	.right{
+		width: calc(100% - 220px);
+		float: right;
+		background: white;
+		// height: 100%;
+	}
+	::v-deep(.el-scrollbar__view){
+		height: 100%;
+		background: #a7aaad;
+	}
+	.ul-left-menu{
+		list-style: none;
+		padding: 2px 2px;
+		li{
+			padding: 4px 2px;
+		}
+	}
+	.bottom-log{
+		border: 1px solid #d5cdcd;
+        padding: 5px 5px;
+		top: 10px;
+        position: relative;
+		overflow-y: auto;
+        height: 300px;
+	}
+	.top-recent{
+		border: 1px solid #d5cdcd;
+		padding: 5px 5px;
+		position: relative;
+		height: 100%;
+		width:100%;
+		overflow: auto;
+	}
+	.clear-btn{
+		left: 20px;
+		position: relative;
+		height: 28px;
+		width: 68px;
+	}
+	.machine-list{
+		width: 260px;
+		position: relative;
+		float: left;
+		border: 2px solid #e5e7ec;
+		border-radius: 8px;
+		margin: 1px 4px;
+		background: #f0f1ed;
+		
+		max-height: 300px;
+        overflow-y: auto;
+	}
+	.close{
+		width: 20px;border: none;cursor: pointer;
+	}
+	.subscribe-topic{
+		border: 1px solid #d5c8c8;
+		top: 20px;
+		position: relative;
+		padding: 1px 1px;
+	}
+    .subscribe-btn{
+		position: relative;
+		// height: 28px;
+		// width: 68px;
+		margin: 3px 1px;
+	}
+	.stop-machine-btn{
+		height: 20px;
+		right: 14px;
+		position: relative;
+		width: 72px;
+		float: right;
+	}
+	::v-deep .el-input{
+		height: auto;
+	}
+</style>
