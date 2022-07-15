@@ -1,0 +1,834 @@
+<template>
+    <div class="imutation-main" style="height:100%;">
+		<div class="left" >
+			<label>服务器IP</label>
+			<br>
+			<el-input v-model="prosData.serverIp" style="width:200px;"></el-input>
+			<br>
+			<label>端口</label>
+			<br>
+			<el-input v-model="prosData.port" style="width: 200px;padding: 5px 1px;"></el-input>
+			<br>
+			<el-button type="success" @click="connectBtn()" :disabled="!prosData.notConnect">连接</el-button> 
+			<el-button type="danger" @click="cutConnectBtn()" :disabled="prosData.notConnect">断开连接</el-button>
+			<br>
+			<!-- 订阅列表 -->
+			<div class="subscribe-topic">
+				<label>填写订阅主题</label>
+				<el-input v-model="prosData.topicInput"></el-input>
+				<el-button @click="subscribeTopicBtn(prosData.topicInput)" class="subscribe-btn" :disabled="prosData.notConnect">订阅</el-button>
+				<br>
+				<div class="sub-topic-list" style="padding: 8px 1px;">
+					<h5 id="subscribeListLabel">订阅主题列表</h5>
+					<div id="subscribeList-tt">
+						<div id="{{topicItem.topic}}" class="subscribeListItem" v-for="(topicItem,index) in prosData.subTopicsShow" :key="index">
+						  {{topicItem.topic}}&nbsp;
+						  <button style="width: 20px;border: none;cursor: pointer;" class="close" title="取消订阅" @click="unsubscribe(topicItem.topic)">×</button>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<!-- <div class="start-topic-btn">
+				<el-button @click="startTopicBtn()" class="start-btn" style="top: 30px;position: relative;" :disabled="prosData.notConnect">开始执行</el-button>
+			</div> -->
+
+		</div>
+		<div class="right">			
+			<div class="top-recent">
+                <div style="">设备状态修改</div>
+				<el-form :inline="true" :model="formInlineData" style="padding: 10px 0px 0px 0px;border-bottom: 1px solid #d5cdcd;padding: 0 28px;">
+                    <el-form-item label="设备名称">
+						<el-input v-model="formInlineData.name" placeholder="如，machine-01"></el-input>
+					</el-form-item>
+					<el-form-item label="设备状态">
+						<el-radio-group v-model="formInlineData.status">
+							<el-radio label="1">闲时</el-radio>
+							<el-radio label="2">忙时</el-radio>
+						</el-radio-group>
+					</el-form-item>
+					<el-form-item label="设备忙时任务ID"> <!--v-show="formInlineData.status == 2"> -->
+						<el-input-number v-model="formInlineData.taskid" :min="0" :max="100"></el-input-number>
+					</el-form-item>		 
+					<el-form-item style="top: -12px;left: 42px;position: relative;">
+						<el-button type="success" @click="saveEditMachineStatus()" :disabled="prosData.notConnect">提交状态修改</el-button>
+						<!-- <el-button>取消</el-button> -->
+					</el-form-item>
+				</el-form>
+
+                <br>
+				<div style="">设备任务修改</div>
+				<el-form :model="raskData" style="padding: 10px 0px 0px 0px;">
+                    <el-form-item label="任务编号" class="inline-rask inline-item-left">
+						<el-input v-model="raskData.uid" placeholder="如，massion-01"></el-input>
+					</el-form-item>
+					<el-form-item label="编辑类型" class="inline-rask inline-item-left">
+						<!-- <el-input v-model="formInlineData.name" placeholder="如，1 修改，2 新增临时任务"></el-input> -->
+						<el-radio-group v-model="raskData.utype">
+							<el-radio label=1>修改</el-radio>
+							<el-radio label=2>新增临时任务</el-radio>
+						</el-radio-group>
+					</el-form-item>
+					<el-form-item label="任务类型(新增时设置)" class="inline-rask inline-item-left"> <!--  v-show="raskData.utype == 2">  -->
+						<el-select v-model="raskData.type">
+							<el-option label="无" value=0></el-option>
+							<el-option label="行驶" value=1></el-option>
+							<el-option label="塔机吊装" value=2></el-option>
+							<el-option label="起重机吊装" value=3></el-option>
+							<el-option label="挖机挖掘" value=4></el-option>
+							<!-- <el-option label="行驶" value=5></el-option> -->
+							<el-option label="泵车泵送" value=6></el-option>
+							<el-option label="搅拌车对接" value=7></el-option>
+							<el-option label="高机玻璃安装" value=8></el-option>
+							<el-option label="抹灰机器人开始抹灰" value=9></el-option>
+						</el-select>
+					</el-form-item>
+					<br>
+					<el-form-item label="更变任务顺序" class="inline-rask inline-item-left">
+						<el-input-number v-model="raskData.index" :min="0" :max="100"></el-input-number>
+					</el-form-item>
+					<el-form-item label="任务名称" class="inline-rask inline-item-left">
+						<el-input v-model="raskData.name" placeholder="如，rask-01"></el-input>
+					</el-form-item>
+					<el-form-item label="更变任务设备名称" class="inline-rask inline-item-left">
+						<el-input v-model="raskData.resourceId" placeholder="如，machine-01"></el-input>
+					</el-form-item>
+					<el-form-item label="任务实际开始时间" class="inline-rask inline-item-left">
+						<el-input-number v-model="raskData.startTime" :min="20201231" :max="20301231"></el-input-number>
+					</el-form-item>
+					<el-form-item label="任务实际结束时间" class="inline-rask inline-item-left">
+						<el-input-number v-model="raskData.endTime" :min="20201231" :max="20301231"></el-input-number>
+					</el-form-item>
+					<el-form-item label="任务预计开始时间" class="inline-rask inline-item-left">
+						<el-input-number v-model="raskData.planStartTime" :min="20201231" :max="20301231"></el-input-number>
+					</el-form-item>
+					<el-form-item label="任务预计结束时间" class="inline-rask inline-item-left">
+						<el-input-number v-model="raskData.planEndTime" :min="20201231" :max="20301231"></el-input-number>
+					</el-form-item>
+
+                    <br>
+					<label style="position:relative;padding:0 28px;color: #606266;font-weight: 700;">任务区域参数</label>
+					<el-button type="success" @click="addAreaParams()" style="margin: 6px 0;" v-show="raskData.Area.length<3">
+						<el-icon><Plus /></el-icon>
+						新增区域参数
+					</el-button>	
+					<br>
+				    <el-form-item label="" style="position:relative;padding:0 28px;">						
+						<el-form-item style="border:1px solid #6464aa;margin: 2px 0px;" v-for="(item,index) in raskData.Area" :key="index">
+							<label style="color: #606266;padding: 0px 4px;">区域参数【{{index + 1}}】：</label>
+							<el-form-item label="区域ID" class="area-item" style="width:240px;">
+								<!-- <el-input v-model="item.AreaId" placeholder="如，area-01"></el-input> -->
+								<el-input-number v-model="item.AreaId"></el-input-number>
+							</el-form-item>
+							<el-form-item label="" class="area-item">
+								<el-form-item class="area-item" label="坐标位置， X:">
+									<!-- <el-input v-model="item.position.x" placeholder=""></el-input> -->
+									<el-input-number v-model="item.position.x"></el-input-number>
+								</el-form-item>
+								<el-form-item class="area-item" label="Y:">
+									<!-- <el-input v-model="item.position.y" placeholder=""></el-input> -->
+									<el-input-number v-model="item.position.y"></el-input-number>
+								</el-form-item>
+								<el-form-item class="area-item" label="Z:">
+									<!-- <el-input v-model="item.position.z" placeholder=""></el-input> -->
+									<el-input-number v-model="item.position.z"></el-input-number>
+								</el-form-item>
+							</el-form-item>
+							<el-form-item class="area-item" label="朝向角度">
+								<!-- <el-input v-model="item.orientation" placeholder=""></el-input> -->
+								<el-input-number v-model="item.orientation"></el-input-number>
+							</el-form-item>
+							<el-button type="danger" style="color: rgb(96, 98, 102);padding: 0px 36px;margin: 0 8px;cursor: pointer;width: 50px;" @click="removeAreaParams(index)" v-show="index > 0">
+								<el-icon> <CloseBold /></el-icon>
+								删除
+							</el-button>
+						</el-form-item>
+					</el-form-item>
+
+                    <br>
+					<label style="position:relative;padding:0 28px;color: #606266;font-weight: 700;">任务参数</label>
+					<br>
+					<el-form-item label="" style="position:relative;padding:0 28px;">
+                        <el-form-item style="border:1px solid #6464aa;margin: 2px 0px;" v-for="(item,index) in raskData.buildingUnit" :key="index">
+							<label style="color: #606266;padding: 0px 4px;">任务参数【{{index + 1}}】：</label>
+							<el-form-item class="area-item" label="构件ID" style="width:240px;">
+								<!-- <el-input v-model="item.unitid" placeholder="如，unit-01"></el-input> -->
+								<el-input-number v-model="item.unitid"></el-input-number>
+							</el-form-item>
+							<el-form-item class="area-item" label="构件重量">
+								<!-- <el-input v-model="item.unitweight" placeholder=""></el-input> -->
+								<el-input-number v-model="item.unitweight"></el-input-number>
+							</el-form-item>
+							<el-form-item class="area-item" label="构件类型" style="width:240px;">
+								<!-- <el-input v-model="item.unittype" placeholder=""></el-input> -->
+								<el-input-number v-model="item.unittype"></el-input-number>
+							</el-form-item>
+							<el-form-item class="area-item" label="挖沟长度" style="width:240px;">
+								<!-- <el-input v-model="item.unitlength" placeholder=""></el-input> -->
+								<el-input-number v-model="item.unitlength"></el-input-number>
+							</el-form-item>
+							<el-form-item class="area-item" label="挖沟宽度" style="width:240px;">
+								<!-- <el-input v-model="item.unitwidth" placeholder=""></el-input> -->
+								<el-input-number v-model="item.unitwidth"></el-input-number>
+							</el-form-item>
+							<el-form-item class="area-item" label="挖沟深度" style="width:240px;">
+								<!-- <el-input v-model="item.unitheight" placeholder=""></el-input> -->
+								<el-input-number v-model="item.unitheight"></el-input-number>
+							</el-form-item>
+                        </el-form-item>
+					</el-form-item>
+
+					<el-form-item style="position:relative;padding:0 28px;">
+                        <el-button type="success" @click="saveEditRask()" :disabled="prosData.notConnect">提交任务修改</el-button>
+					</el-form-item>         
+				</el-form>
+			</div>
+
+			<!-- <div class="bottom-log">
+                <label>日志({{prosData.logNum}})</label> <el-button @click="clearLog()" class="clear-btn">清除日志</el-button>
+				<br>
+				<div class="pre-scrollable" id="logContents" style="top: 4px;position: relative;"></div>
+			</div> -->
+			<div class="bottom-log">
+                <label>日志({{prosData.logNum}})</label> <el-button @click="clearLog()" class="clear-btn">清除日志</el-button>
+				<br>
+				<div class="pre-scrollable" id="logContentsTemp" style="top: 4px;position: relative;">
+                    <div id='logLine-{{item.logId}}' class='logLine' v-for="(item,index) in prosData.logsTent" :key="index">
+						<span class='logTime'>(时间:{{item.time}})
+						</span><span class='logMessage'>{{item.msg}}</span>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</template>
+
+<script lang="ts">
+import { defineComponent, ref,toRefs, reactive,} from 'vue';
+import { ElMessage } from 'element-plus'
+import { Plus,CloseBold } from '@element-plus/icons-vue'
+//import { el } from 'element-plus/lib/locale';
+
+export default defineComponent({
+	name: 'singleMachineTest',
+	components: { Plus,CloseBold },
+	setup() {
+        //日期格式函数
+		const dateFormat = (date:any,fmt:any) =>  { //author: meizz  
+			const o:any = {  
+			"M+" : date.getMonth()+1,         //月份  
+			"d+" : date.getDate(),          //日  
+			"h+" : date.getHours(),          //小时  
+			"m+" : date.getMinutes(),         //分  
+			"s+" : date.getSeconds(),         //秒  
+			"q+" : Math.floor((date.getMonth()+3)/3), //季度  
+			"S" : date.getMilliseconds()       //毫秒  
+			};  
+			if(/(y+)/.test(fmt))  
+			fmt=fmt.replace(RegExp.$1, (date.getFullYear()+"").substr(4 - RegExp.$1.length));  
+			for(let k in o)  
+			if(new RegExp("("+ k +")").test(fmt))  
+			fmt = fmt.replace(RegExp.$1, (RegExp.$1.length==1) ? (o[k]) : (("00"+ o[k]).substr((""+ o[k]).length)));  
+			return fmt;  
+		} 
+
+		let client:any
+		const machineTopic = 'display/status/Machine'
+		const taskTopic = 'display/status/Task'
+		const subTaskTopic = 'task/#'
+		const startTopic = 'display/start'
+		const stopTopic = 'display/stop/machine'
+
+		const topicEditMachine = 'display/edit/Machine'
+		const topicEditMachineBack = 'display/edit/Machine/back'
+		const topicEditTask = 'display/edit/Task'
+		const topicEditTaskBack = 'display/edit/Task/back'
+
+        const formInlineData = reactive({
+			name:'',
+			status: '1',
+			taskid: 0,
+			taskStatus:1,
+			uid:'',
+			position: { x: 0, y: 0, z: 0 },
+		})
+
+        const raskData = reactive({
+			uid:'',
+			utype: '1',
+			type: '',
+			index: 1,
+			name: '',
+			resourceId:'',
+			startTime: '',
+			endTime: '',
+			planStartTime: '',
+			planEndTime: '',
+			Area:[
+               {
+				   AreaId:'',
+				   position: { x: 0, y: 0, z: 0 },
+				   orientation:0
+			   }
+			],
+			buildingUnit:[
+                {
+					unitid: '',
+					unitweight: '',
+					unittype: '',
+					unitlength: '',
+					unitwidth: '',
+					unitheight: ''
+				}
+			],
+		})
+
+		//formInlineData.status = ref('1')
+		
+		//属性数据
+		const prosData = reactive({ 
+			selectItemIndex: '0',
+			serverIp: '192.168.1.157',
+			port: '8083',
+			notConnect: true,
+			textAreaLog: 'fsdfds',
+			topicInput: '',
+			logNum:0,
+			subTopics: [ 
+				//{ topic: machineTopic, qos: 0 },
+				//{ topic: taskTopic, qos: 0 }, 
+
+				//{ topic: subTaskTopic, qos: 0 }, 
+                //{ topic: topicEditMachine, qos: 0 },   { topic: topicEditTask, qos: 0 }, 
+			],
+			subTopicsShow:[],
+			tasklist:[
+				{
+					"id":'0',          //整型，任务id
+					"index":'',       //整型，任务执行顺序编号
+					"name":'',        //字符串，任务名称
+					"type":'',        //整型枚举，任务类型，1 行驶任务，2 吊装任务，3 挖沟任务，4 泵送任务
+					"process":'',     //浮点型，施工进度
+					"resource":'test1',  //字符串，任务预计执行设备名称
+					"startTime":'',   //整型，任务实际开始时间，格林威治时间
+					"endTime":'',     //整型，任务实际结束时间
+					"planStartTime":'',   //整型，任务计划开始时间
+					"planEndTime":'',     //整型，任务计划结束时间
+					"averageTime":'',     //整型，任务平均执行时间
+					"groupId":'',     //分组ID
+					"Area":         //不同的任务类型有不同个数的区域参数，参数按顺序下标排列
+					[
+						{
+							"AreaId":'',      //整型，区域id
+							"position":{"x":1,"y":2,"z":3}, //非区域时具体坐标位置
+							"orientation":'', //浮点型，朝向角度
+						}
+					],
+					"buildingUnit": //任务参数
+					[
+						{
+							"unitid":'',
+							"unittype":'',
+							"unitweight":'',
+							"orientation":''
+						}
+					],
+					"status":''
+				}
+			],
+            machinelist: [{
+				        uid: 'machine-uid-kkkkk1',         //整型，编号
+						name: 'test1',        //字符串型，设备识别号/设备名
+						type: 1,        //整型，智能设备类型，1 无人塔机，2无人汽车起重机，3挂钩机器人，4 卸钩机器人，5 无人泵车，6 无人挖机
+						JointStat:[0,0,0], //根据设备类型不同对应不同参数，参数均为字符串或浮点型
+						position:{    //当前位置  
+							x:122,
+							y:112,
+							z: 12
+						},
+						inputTxt: '',
+						showTask:false,
+						currentTaskID: '0'   //当前执行任务ID
+			},
+			],
+			logsTent:[],
+		})
+
+        //保存设备状态修改
+		const saveEditMachineStatus= () =>{			
+			debugger
+			//let dataJson = { uid:'',name:'',status:formInlineData.status,taskid:0,taskStatus:1}
+			const statusTemp = formInlineData.status
+			if(formInlineData.status == 1){ //1闲时
+				formInlineData.taskStatus = 1
+				formInlineData.taskid = 0
+			}else{ //2忙时
+                formInlineData.taskStatus = 2
+			}
+			formInlineData.type = parseInt(formInlineData.type)
+			const message = JSON.stringify(formInlineData)
+			publish(topicEditMachine,message,0,false)
+			ElMessage({
+				showClose: true,
+				message: '设备状态修改已提交',
+				type: 'success',
+			})
+			formInlineData.status = statusTemp
+		}
+		//取消保存设备状态修改
+		const cancelEditMachineStatus= () =>{
+			debugger
+		}
+
+		//提交任务修改
+		const saveEditRask = () =>{			
+			debugger
+			const utypeTemp = raskData.utype
+			const typeTemp = raskData.type
+            if(raskData.utype == 1){ //1 修改
+               raskData.utype = 1
+			}else{ //2 新增
+               raskData.utype = 2
+			}
+			raskData.type = parseInt(raskData.type)
+
+			const message = JSON.stringify(raskData)
+			publish(topicEditTask,message,0,false)
+			ElMessage({
+				showClose: true,
+				message: '设备任务修改已提交',
+				type: 'success',
+			})
+			raskData.utype = utypeTemp
+            raskData.type = typeTemp
+		}
+		//取消任务修改
+		const cancelEditRask = () =>{
+			debugger
+		}
+		//新增区域参数
+		const addAreaParams = () =>{
+			debugger
+			raskData.Area.push({
+				   AreaId:'',
+				   position: { x: 0, y: 0, z: 0 },
+				   orientation:0
+			})
+			raskData.buildingUnit.push(                {
+					unitid: '',
+					unitweight: '',
+					unittype: '',
+					unitlength: '',
+					unitwidth: '',
+					unitheight: ''
+			})
+		}
+		//删除区域参数
+		const removeAreaParams = (id:any) =>{
+			debugger
+			raskData.Area.splice(id,1)
+			raskData.buildingUnit.splice(id,1)
+		}
+
+		//清除日志
+		const clearLog = () =>{
+			prosData.logNum = 0;
+			//$("#logContents").html("");
+			prosData.logsTent = []
+		}
+
+		//机器发送指令
+		let sendMessage = (msg:any) =>{
+			// prosData.logNum = 0;
+			// $("#logContents").html("");
+			//const publish =(topic:any, message:any, qos:any, retained:any)
+		}
+
+        //添加日志
+		const appendLog =(msg:string)=> {
+			prosData.logNum++;
+			if(prosData.logNum > 1000){
+				prosData.logNum = 1;
+				//$("#logContents").html("");
+				prosData.logsTent = []
+			}
+			//msg = "<div id='logLine-"+prosData.logNum+"' class='logLine'><span class='logTime'>(时间:" + (dateFormat(new Date(),"yyyy-MM-ddThh:mm:ss").split("T"))[1].substr(0, 12) + ")</span><span class='logMessage'>" + msg + "</span></div>";
+			//$("#logContents").append(msg + "\n");
+			prosData.logsTent.push({ logId: prosData.logNum, time: (dateFormat(new Date(),"yyyy-MM-ddThh:mm:ss").split("T"))[1].substr(0, 12), msg: msg})
+		}
+       
+        const onMqttSelect = (event:any) => {
+		   prosData.selectItemIndex = '1'
+           debugger
+		}
+		const onFacilitySelect = (event:any) => {
+		   prosData.selectItemIndex = '2'
+           debugger
+		}
+
+		//uuid随机生成
+		const getUuid =() => {
+			const uid:any = [];
+			const hexDigits = "0123456789abcdefghijklmnopqrst";
+			for (let i = 0; i < 32; i++) {
+				uid[i] = hexDigits.substr(Math.floor(Math.random() * 0x10), 1);
+			}
+			uid[6] = "4";
+			uid[15] = hexDigits.substr((uid[15] & 0x3) | 0x8, 1);
+			let uuid = uid.join("");
+			return uuid;
+		}
+
+		//接受到订阅主题消息 function called whenever our MQTT connection receives a message
+		const onMessage =(msg:any) => {
+			const topic = msg.destinationName;
+			const payload = msg.payloadString;
+			const qos = msg._getQos();
+			const retained = msg._getRetained();
+			const qosStr = ((qos > 0) ? "[qos " + qos + "]" : "");
+			const retainedStr = ((retained) ? "[retained]" : "");
+			appendLog("收到消息 [" + topic + "]" + qosStr + retainedStr + " " + payload + "");
+			
+			//接受到所有设备消息
+			if(topic == machineTopic){
+				prosData.machinelist = []
+				prosData.machinelist = JSON.parse(payload).machinelist
+				//if(prosData.machinelist && prosData.machinelist.length > 1) prosData.machinelist.shift()
+			}
+
+			//接受得到所有任务信息
+			if(topic == taskTopic){
+				prosData.tasklist = []
+				prosData.tasklist = JSON.parse(payload).tasklist
+			}
+
+            //编辑设备回执
+            if(topic == topicEditMachineBack){
+				
+			}
+			//编辑任务回执
+            if(topic == topicEditTaskBack){
+                
+			}
+
+		}
+
+		//失去连接 - 主动断开连接或网络断开，websocket过期被动失去连接
+		const onConnectLost = (error:any) => { 
+			debugger
+			prosData.notConnect = true;
+			appendLog("断开连接 " + prosData.serverIp + ":" + prosData.port + ".  Code: " + error.errorCode + ", Message: " + error.errorMessage);
+			//$("#subscribeList").html("");
+			prosData.subTopicsShow = []
+			ElMessage({
+				showClose: true,
+				message: '已断开Mqtt服务器【'+ prosData.serverIp + ":" + prosData.port +'】的连接',
+				type: 'warning',
+			})
+		}
+
+		//连接MQTT服务器
+		const connectBtn = (event:any) => {
+		    debugger
+		    try {
+			    const clientId = getUuid()
+	        	client = new Paho.MQTT.Client(prosData.serverIp, parseFloat(prosData.port), clientId);
+			} catch (error) {
+				//alert("Error:" + error);
+				ElMessage({
+					showClose: true,
+					message: '连接Mqtt服务器【'+ prosData.serverIp + ":" + prosData.port +'】失败Error:' + error,
+					type: 'warning',
+				})
+			}
+
+			client.onMessageArrived = onMessage
+			client.onConnectionLost = onConnectLost
+
+            //连接成功
+			const onSuccess = () => { 
+				debugger
+                prosData.notConnect = false;
+			    appendLog("连接到 " + prosData.serverIp + ":" + prosData.port);
+				ElMessage({
+					showClose: true,
+					message: '连接到Mqtt服务器【'+ prosData.serverIp + ":" + prosData.port +'】',
+					type: 'success',
+				})
+				
+				//默认订阅主题
+				let time = 500;
+				for (let i in prosData.subTopics) {
+					setTimeout((function(topic) {
+						return function() {
+							subscribeTopic(topic)
+						}
+					})(prosData.subTopics[i]), time);
+					time += 100;
+				}
+			}
+
+            //连接服务器失败
+			const onFailure = (error:any) => { 
+				debugger
+				appendLog("连接到" + prosData.serverIp + ":" + prosData.port + "失败.  Code: " + error.errorCode + ", Message: " + error.errorMessage);
+				prosData.notConnect = true;
+				prosData.subTopicsShow = []
+				ElMessage({
+					showClose: true,
+					message: '连接到Mqtt服务器【'+ prosData.serverIp + ":" + prosData.port +'】失败',
+					type: 'error',
+				})
+		    }
+			
+			const connectOptions = { 
+				useSSL:false,
+				cleanSession: true, //用于控制是否客户端刷新页面丢失消息，服务端保留Session，建立连接重发消息
+				keepAliveInterval: 3600, // if no activity after one hour, disconnect
+				timeout:5,
+				onSuccess: onSuccess,
+				onFailure: onFailure,
+			}
+			client.connect(connectOptions);
+		}
+
+		//停止机器
+		const stopMachineBtn = (machineItem:any)=>{
+			debugger
+			
+			const message = JSON.stringify({name:machineItem.name})
+			publish(stopTopic,message,2,false)
+			//alert('紧急停止命令已发送')
+			ElMessage({
+				showClose: true,
+				message: '紧急停止命令已发送',
+				type: 'success',
+			})
+		}
+
+		//开始执行命令
+		const startTopicBtn = ()=>{
+			debugger
+			publish(startTopic,"{}",0,false)
+			//alert('开始执行命令已发送')
+			ElMessage({
+				showClose: true,
+				message: '开始执行命令已发送',
+				type: 'success',
+			})
+		}
+
+        //订阅主题按钮函数
+        const subscribeTopicBtn = (topic:any)=>{
+            subscribeTopic({topic:topic,qos:0})
+		}
+
+		//订阅消息
+		const subscribeTopic =(topicOption:any)=> {
+			client.subscribe(topicOption.topic, {
+				qos: topicOption.qos,
+				onSuccess: function() {
+					appendLog("订阅到 [" + topicOption.topic + "][qos " + topicOption.qos + "]");
+					prosData.subTopicsShow.push({topic:topicOption.topic,qos: topicOption.qos})
+				},
+				onFailure: function() {
+					appendLog("订阅失败: [" + topicOption.topic + "][qos " + topicOption.qos + "]");
+				}
+			})
+		}
+
+		//取消订阅
+		const unsubscribe =(topic:any) => {
+			debugger
+			client.unsubscribe(topic, {
+				onSuccess: function() { //取消订阅成功
+					appendLog("取消订阅 [" + topic + "]");
+					for(let i=0;i<prosData.subTopicsShow.length;i++){
+						if(prosData.subTopicsShow[i].topic == topic){
+							prosData.subTopicsShow.splice(i,1) //取消订阅，前端需要删除 //prosData.subTopicsShow.push({topic:topicOption.topic,qos: topicOption.qos})
+							break
+						}
+					}
+					ElMessage({ 
+						showClose: true,
+						message: '取消订阅主题【'+ topic +'】',
+						type: 'success',
+					})
+				},
+				onFailure: function() { //取消订阅失败
+					appendLog("取消订阅失败: [" + topic + "]");
+					ElMessage({
+						showClose: true,
+						message: '取消订阅主题【'+ topic +'】失败',
+						type: 'error',
+					})
+				}
+			});
+		}
+
+		//展开任务详情
+		const showTaskDetail =(machineItem:any) =>{
+			debugger
+			for(let i=0;i<prosData.tasklist.length;i++){
+				if(machineItem.currentTaskID == prosData.tasklist[i].id && machineItem.name == prosData.tasklist[i].resource){
+					machineItem.showTask = true
+					machineItem.taskDetail = prosData.tasklist[i]
+					return true
+					//break;
+				}
+				if(i == prosData.tasklist.length -1){
+					//无对应任务提示
+					// ElMessage({
+					// 	showClose: true,
+					// 	message: '没有找到与设备匹配的当前任务',
+					// 	type: 'warning',
+					// })
+				}
+			}
+			return false
+		}
+
+        //断开连接Mqtt服务器
+		const cutConnectBtn = (event:any) => {
+		   debugger
+		   client.disconnect()
+		   prosData.notConnect = true
+		   prosData.subTopicsShow = []
+		   prosData.machinelist = []
+		}
+		
+		//发布消息
+		const publish =(topic:any, message:any, qos:any, retained:any)=> {
+			let msgObj = new Paho.MQTT.Message(message);
+			msgObj.destinationName = topic;
+			if (qos) { msgObj.qos = qos; }
+			if (retained) { msgObj.retained = retained; }
+			client.send(msgObj);
+			var qosStr = ((qos > 0) ? "[qos " + qos + "]" : "");
+			var retainedStr = ((retained) ? "[retained]" : "");
+			appendLog("发布消息 [" + topic + "]" + qosStr + retainedStr + " " + message + "");	        
+	    }
+        
+        return {
+			prosData,
+			formInlineData,
+			raskData,
+			saveEditMachineStatus,
+			cancelEditMachineStatus,
+			saveEditRask,
+			cancelEditRask,
+			addAreaParams,
+			removeAreaParams,
+
+			onMqttSelect,
+			onFacilitySelect,
+			connectBtn,
+			cutConnectBtn,
+			clearLog,
+			sendMessage,
+			unsubscribe,
+			subscribeTopicBtn,
+			showTaskDetail,
+			startTopicBtn,
+			stopMachineBtn,
+		}
+	},
+
+});
+</script>
+
+<style scoped lang="scss">
+    .left{
+		width: 220px;
+		float: left;
+		height:100%;
+		left:-8px;
+		position: relative;
+	}
+	.right{
+		width: calc(100% - 220px);
+		float: right;
+		background: white;
+		// height: 100%;
+	}
+	::v-deep(.el-scrollbar__view){
+		height: 100%;
+		background: #a7aaad;
+	}
+	.ul-left-menu{
+		list-style: none;
+		padding: 2px 2px;
+		li{
+			padding: 4px 2px;
+		}
+	}
+	.bottom-log{
+		border: 1px solid #d5cdcd;
+		margin: 10px 0px;
+		position: relative;
+		overflow-y: auto;
+		height: 300px;
+	}
+	.top-recent{
+		border: 1px solid #d5cdcd;
+		padding: 5px 5px;
+		position: relative;
+		height: 100%;
+		width:100%;
+		overflow: auto;
+	}
+	.clear-btn{
+		left: 20px;
+		position: relative;
+		height: 28px;
+		width: 68px;
+	}
+	.machine-list{
+		width: 260px;
+		position: relative;
+		float: left;
+		border: 1px solid #485686;
+		margin: 1px 4px;
+		background: #b3e19d;
+		
+		max-height: 300px;
+        overflow-y: auto;
+	}
+	.close{
+		width: 20px;border: none;cursor: pointer;
+	}
+	.subscribe-topic{
+		border: 1px solid #d5c8c8;
+		top: 20px;
+		position: relative;
+		padding: 1px 1px;
+	}
+    .subscribe-btn{
+		position: relative;
+		// height: 28px;
+		// width: 68px;
+		margin: 3px 1px;
+	}
+	.stop-machine-btn{
+		height: 20px;
+		right: 14px;
+		position: relative;
+		width: 72px;
+		float: right;
+	}
+	.inline-rask{
+		display: inline-flex;
+	}
+	.inline-item-left{
+		margin: 6px 0;
+		padding: 0 28px;
+		position: relative;
+	}
+	.area-item{
+		padding: 4px 10px;
+		position: relative;
+	}
+	::v-deep .el-input{
+		height: auto;
+	}
+</style>
